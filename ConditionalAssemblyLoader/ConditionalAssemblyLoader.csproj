@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>0.1.0</Version>
+        <Title>Conditional Assembly Loader</Title>
+        <Authors>Designer225</Authors>
+        <Description>A library for conditionally loading of implementation assemblies for interface assemblies. Allows separating of interface and implementation and dynamic linkage of both via dependency injection.</Description>
+        <Copyright>Raymond Wu (Designer225)</Copyright>
+        <PackageProjectUrl>https://github.com/Designer225/ConditionalAssemblyLoader</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Designer225/ConditionalAssemblyLoader</RepositoryUrl>
+        <Nullable>enable</Nullable>
+        <LangVersion>8</LangVersion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\ConditionalAssemblyLoader.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugSymbols>true</DebugSymbols>
+      <DocumentationFile>bin\Release\ConditionalAssemblyLoader.xml</DocumentationFile>
+    </PropertyGroup>
+
+</Project>
