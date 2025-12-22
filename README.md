@@ -4,3 +4,4 @@ conditionally load assemblies at runtime depending on runtime conditions.
 The goal is to allow users to isolate code that would otherwise change from version to version
 and reference version-specific code via dependency injection.
 
+For more details, see the README.md inside the `ConditionalAssemblyLoader` folder.
