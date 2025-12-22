@@ -12,6 +12,7 @@
         <RepositoryUrl>https://github.com/Designer225/ConditionalAssemblyLoader</RepositoryUrl>
         <Nullable>enable</Nullable>
         <LangVersion>8</LangVersion>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -22,5 +23,9 @@
       <DebugSymbols>true</DebugSymbols>
       <DocumentationFile>bin\Release\ConditionalAssemblyLoader.xml</DocumentationFile>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
 </Project>
