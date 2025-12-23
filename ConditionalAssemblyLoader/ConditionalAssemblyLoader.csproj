@@ -13,6 +13,7 @@
         <Nullable>enable</Nullable>
         <LangVersion>8</LangVersion>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseUrl>https://licenses.nuget.org/Apache-2.0</PackageLicenseUrl>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
