@@ -74,12 +74,32 @@ namespace ConditionalAssemblyLoader
                 {
                     try
                     {
-                        Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyFile}...");
-                        var assembly = Assembly.LoadFile(e.AssemblyFile);
-                        Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {e.AssemblyFile}, attempting to create entry instance...");
+                        Assembly? assembly = null;
+                        if (e.AssemblyName != null)
+                        {
+                            try
+                            {
+                                Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyName}...");
+                                assembly = Assembly.Load(new AssemblyName(e.AssemblyName));
+                            }
+                            catch (Exception ex)
+                            {
+                                Error?.Invoke(
+                                    $"[ConditionalAssemblyLoader] Failed to load {e.AssemblyName} by name. Continuing by path. Exception: {ex}");
+                            }
+                        }
+
+                        if (assembly is null)
+                        {
+                            Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyFile}...");
+                            assembly = Assembly.LoadFile(e.AssemblyFile);
+                            Out?.Invoke(
+                                $"[ConditionalAssemblyLoader] Loaded {e.AssemblyFile}, attempting to create entry instance...");
+                        }
+                        
                         var type = assembly.GetTypes().First(x => typeof(T).IsAssignableFrom(x));
                         var instance = (T)Activator.CreateInstance(type);
-                        Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {instance.ToString()} from {e.AssemblyFile}.");
+                        Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {instance} from {e.AssemblyFile}.");
                         OnAssemblyLoaded(instance);
                         result = new LoadedConditionalAssembly<T>(assembly, instance);
                         error = null;
