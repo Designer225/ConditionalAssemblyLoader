@@ -81,6 +81,8 @@ namespace ConditionalAssemblyLoader
                             {
                                 Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyName}...");
                                 assembly = Assembly.Load(new AssemblyName(e.AssemblyName));
+                                Out?.Invoke(
+                                    $"[ConditionalAssemblyLoader] Loaded {e.AssemblyName} from {assembly.Location}, attempting to create entry instance...");
                             }
                             catch (Exception ex)
                             {
@@ -94,12 +96,12 @@ namespace ConditionalAssemblyLoader
                             Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyFile}...");
                             assembly = Assembly.LoadFile(e.AssemblyFile);
                             Out?.Invoke(
-                                $"[ConditionalAssemblyLoader] Loaded {e.AssemblyFile}, attempting to create entry instance...");
+                                $"[ConditionalAssemblyLoader] Loaded {assembly.Location}, attempting to create entry instance...");
                         }
                         
                         var type = assembly.GetTypes().First(x => typeof(T).IsAssignableFrom(x));
                         var instance = (T)Activator.CreateInstance(type);
-                        Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {instance} from {e.AssemblyFile}.");
+                        Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {instance} from {assembly.Location}.");
                         OnAssemblyLoaded(instance);
                         result = new LoadedConditionalAssembly<T>(assembly, instance);
                         error = null;

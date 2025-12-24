@@ -1,7 +1,77 @@
 # ConditionalAssemblyLoader
-This is a repository for the conditional assembly loader project, which offers a way to
-conditionally load assemblies at runtime depending on runtime conditions.
+ConditionalAssemblyLoader is a library for conditional loading of implementation assemblies for an interface assembly.
 The goal is to allow users to isolate code that would otherwise change from version to version
 and reference version-specific code via dependency injection.
 
-For more details, see the README.md inside the `ConditionalAssemblyLoader` folder.
+## Requirements
+- .NET Standard 2.0
+
+## Usage
+Using ConditionalAssemblyLoader requires at least two projects:
+- The **interface project**, which provides the public API and is referenced by other projects. It produces the **interface assembly**.
+- The other projects are **implementation projects**, which reference the interface and provide the implementation to support the public API.
+  They produce the **implementation assemblies**, one of which is loaded by ConditionalAssemblyLoader depending on the conditions at runtime.
+
+First, reference `ConditionalAssemblyLoader` in the interface project.
+- Option 1: Directly reference `ConditionalAssemblyLoader.dll`.
+- Option 2: Install the `ConditionalAssemblyLoader` NuGet package.
+
+In the interface project, create a type that derives from `AssemblyLoader<T>`. This will be used as the **assembly loader**.
+- `AssemblyLoader<T>` accepts a generic type parameter. The type represents the **entry point** into an implementation assembly and must be a class or interface.
+- Implement `OnAssemblyLoaded()` to perform any follow-up actions required to use the implementation assembly.
+```csharp
+public sealed class MyAssemblyLoader : AssemblyLoader<MyEntryPoint>
+{
+    // ... other members
+    
+    public override void OnAssemblyLoaded(MyEntryPoint entryPoint)
+    {
+        // ... code here
+    }
+}
+
+public abstract class MyEntryPoint
+{
+    // ... members go here
+}
+```
+Next, reference the interface project in the implementation projects and create a type that derives from the entry point type.
+```csharp
+public sealed class MyImplementationEntryPoint : MyEntryPoint
+{
+    // ... members + overrides go here
+}
+```
+Back in the interface project, define a list of `ConditionalAssemblyReference`s for the assembly loader.
+- This can be done within the assembly loader type itself or externally by the user of the assembly loader.
+- A `ConditionalAssemblyReference` defines the conditions needed to use the referenced assembly it is associated with.
+- Each reference is evaluated in the order they are defined in `References`. Newer implementations should be listed ahead of older ones.
+```csharp
+// in the assembly loader type
+public sealed class MyAssemblyLoader : AssemblyLoader<MyEntryPoint>
+{
+    // ...
+    
+    public MyAssemblyLoader()
+    {
+        References.Add(new ConditionalAssemblyReference("MyImplementationAssembly", "Path/To/MyImplementationAssembly.dll"));
+    }
+}
+
+// or externally
+var loader = new MyAssemblyLoader();
+loader.References.Add(new ConditionalAssemblyReference("MyImplementationAssembly", "Path/To/MyImplementationAssembly.dll"));
+```
+Finally, use the assembly loader, either within the interface project or in a different project that references the interface project.
+```csharp
+var loader = new MyAssemblyLoader();
+if (loader.TryLoad(out var loadedAssembly, out var error))
+{
+    var entryPoint = loadedAssembly.Instance;
+    // ... other code
+}
+// ... other code
+```
+
+## License Info
+This project is licensed under the Apache Public License 2.0.
