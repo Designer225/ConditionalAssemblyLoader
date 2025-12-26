@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -74,36 +75,8 @@ namespace ConditionalAssemblyLoader
                 {
                     try
                     {
-                        Assembly? assembly = null;
-                        if (e.AssemblyName != null)
-                        {
-                            try
-                            {
-                                Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyName}...");
-                                assembly = Assembly.Load(new AssemblyName(e.AssemblyName));
-                                Out?.Invoke(
-                                    $"[ConditionalAssemblyLoader] Loaded {e.AssemblyName} from {assembly.Location}, attempting to create entry instance...");
-                            }
-                            catch (Exception ex)
-                            {
-                                Error?.Invoke(
-                                    $"[ConditionalAssemblyLoader] Failed to load {e.AssemblyName} by name. Continuing by path. Exception: {ex}");
-                            }
-                        }
-
-                        if (assembly is null)
-                        {
-                            Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {e.AssemblyFile}...");
-                            assembly = Assembly.LoadFile(e.AssemblyFile);
-                            Out?.Invoke(
-                                $"[ConditionalAssemblyLoader] Loaded {assembly.Location}, attempting to create entry instance...");
-                        }
-                        
-                        var type = assembly.GetTypes().First(x => typeof(T).IsAssignableFrom(x));
-                        var instance = (T)Activator.CreateInstance(type);
-                        Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {instance} from {assembly.Location}.");
-                        OnAssemblyLoaded(instance);
-                        result = new LoadedConditionalAssembly<T>(assembly, instance);
+                        var assembly = LoadAssembly(e);
+                        result = CreateEntryPoint(assembly);
                         error = null;
                         return true;
                     }
@@ -120,6 +93,96 @@ namespace ConditionalAssemblyLoader
             result = default;
             error = new InvalidOperationException("No assembly available fulfills the requisite conditions.");
             return false;
+        }
+
+        private Assembly LoadAssembly(in ConditionalAssemblyReference reference)
+        {
+            try
+            {
+                AppDomain.CurrentDomain.AssemblyResolve += ResolveAssemblyAtLoad;
+                
+                Assembly? assembly = null;
+                if (reference.AssemblyName != null)
+                {
+                    try
+                    {
+                        Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {reference.AssemblyName}...");
+                        assembly = Assembly.Load(new AssemblyName(reference.AssemblyName));
+                        Out?.Invoke(
+                            $"[ConditionalAssemblyLoader] Loaded {reference.AssemblyName} from {assembly.Location}, attempting to create entry instance...");
+                    }
+                    catch (Exception ex)
+                    {
+                        Error?.Invoke(
+                            $"[ConditionalAssemblyLoader] Failed to load {reference.AssemblyName} by name. Continuing by path. Exception: {ex}");
+                    }
+                }
+
+                if (assembly is null)
+                {
+                    Out?.Invoke($"[ConditionalAssemblyLoader] Attempting to load {reference.AssemblyFile}...");
+                    assembly = Assembly.LoadFile(reference.AssemblyFile);
+                    Out?.Invoke(
+                        $"[ConditionalAssemblyLoader] Loaded {assembly.Location}, attempting to create entry instance...");
+                }
+
+                return assembly;
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.AssemblyResolve -= ResolveAssemblyAtLoad;
+            }
+        }
+
+        /// <summary>
+        /// Called when an assembly is being loaded and the default resolution fails.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="args">The event data.</param>
+        /// <returns>The assembly that resolves the type, assembly, or resource;
+        /// or <see langword="null"/> if the assembly cannot be resolved.</returns>
+        protected virtual Assembly? ResolveAssemblyAtLoad(object sender, ResolveEventArgs args)
+        {
+            // attempts to load assembly if it's located in the same directory as the interface assembly
+            var directory = Path.GetDirectoryName(GetType().Assembly.Location);
+            Out?.Invoke($"[ConditionalAssemblyLoader] Seeking matching assembly for {args.Name} in {directory}...");
+            if (directory is null) return null;
+            var path = Path.Combine(directory, new AssemblyName(args.Name).Name + ".dll");
+            return File.Exists(path) ? Assembly.LoadFile(path) : null;
+        }
+
+        private LoadedConditionalAssembly<T> CreateEntryPoint(Assembly assembly)
+        {
+            try
+            {
+                AppDomain.CurrentDomain.AssemblyResolve += ResolveAssemblyAtEntryPoint;
+                var type = assembly.GetTypes().First(x => typeof(T).IsAssignableFrom(x));
+                var instance = (T)Activator.CreateInstance(type);
+                Out?.Invoke($"[ConditionalAssemblyLoader] Loaded {instance} from {assembly.Location}.");
+                OnAssemblyLoaded(instance);
+                return new LoadedConditionalAssembly<T>(assembly, instance);
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.AssemblyResolve -= ResolveAssemblyAtEntryPoint;
+            }
+        }
+
+        /// <summary>
+        /// Called when an entry point is being loaded and the default resolution of a dependency assembly fails.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="args">The event data.</param>
+        /// <returns>The assembly that resolves the type, assembly, or resource;
+        /// or <see langword="null"/> if the assembly cannot be resolved.</returns>
+        protected virtual Assembly? ResolveAssemblyAtEntryPoint(object sender, ResolveEventArgs args)
+        {
+            // attempts to select one of the loaded assemblies
+            var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var result = loadedAssemblies.FirstOrDefault(x => x.GetName().Name == new AssemblyName(args.Name).Name);
+            if (result != null)
+                Out?.Invoke($"[ConditionalAssemblyLoader] Resolved {args.Name} with {result} (from {result.Location}).");
+            return result;
         }
 
         /// <summary>

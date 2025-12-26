@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>0.2.1-alpha</Version>
+        <Version>0.2.2-alpha</Version>
         <Title>Conditional Assembly Loader</Title>
         <Authors>Designer225</Authors>
         <Description>A library for conditionally loading of implementation assemblies for interface assemblies. Allows separating of interface and implementation and dynamic linkage of both via dependency injection.</Description>

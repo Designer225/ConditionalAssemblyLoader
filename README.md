@@ -73,5 +73,19 @@ if (loader.TryLoad(out var loadedAssembly, out var error))
 // ... other code
 ```
 
+## Mechanics
+When the user attempts to load an implementation assembly through the created assembly loader (via `AssemblyLoader.TryLoad()`),
+it will iterate through the list of `ConditionalAssemblyReference`s and attempt to load the referenced assembly.
+During the process, it will attempt to resolve the name of the assembly, if supplied, by checking the directory
+where the loader's assembly is located.
+This is the default behavior of `AssemblyLoader.ResolveAssemblyAtLoad()`, which can be overridden by the user.
+If it cannot do so, it will attempt to load by using the supplied path.
+
+Once an implementation assembly is successfully loaded, the loader will proceed with creating an instance of
+the entry point type. It will attempt to resolve assemblies by checking the currently loaded assemblies.
+This is the default behavior of `AssemblyLoader.ResolveAssemblyAtEntryPoint()`, which can also be overridden by the user.
+After the entry point is created, the loader will call `AssemblyLoader.OnAssemblyLoaded()` before returning
+both the loaded assembly and the entry point to the user.
+
 ## License Info
 This project is licensed under the Apache Public License 2.0.
